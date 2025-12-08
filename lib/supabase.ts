@@ -1,9 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create client only if URL is available
+export const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 // Types matching your actual database schema
 export interface MovieRow {
@@ -25,6 +29,8 @@ export interface MovieRow {
 
 // Fetch all movies
 export async function getAllMovies() {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -39,6 +45,8 @@ export async function getAllMovies() {
 
 // Fetch movies by genre
 export async function getMoviesByGenre(genre: string) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -54,6 +62,8 @@ export async function getMoviesByGenre(genre: string) {
 
 // Fetch movies by year
 export async function getMoviesByYear(year: string) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -69,6 +79,8 @@ export async function getMoviesByYear(year: string) {
 
 // Fetch single movie by ID
 export async function getMovieById(id: number) {
+  if (!supabase) return null;
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -84,6 +96,8 @@ export async function getMovieById(id: number) {
 
 // Search movies by title
 export async function searchMovies(query: string) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -99,6 +113,8 @@ export async function searchMovies(query: string) {
 
 // Fetch featured movies (high rating)
 export async function getFeaturedMovies(limit = 15) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -114,6 +130,8 @@ export async function getFeaturedMovies(limit = 15) {
 
 // Fetch latest movies
 export async function getLatestMovies(limit = 20) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -129,6 +147,8 @@ export async function getLatestMovies(limit = 20) {
 
 // Fetch movies by quality (HD, CAM, etc.)
 export async function getMoviesByQuality(quality: string) {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -144,6 +164,8 @@ export async function getMoviesByQuality(quality: string) {
 
 // Fetch movies with pagination
 export async function getMoviesPaginated(page: number, pageSize = 24) {
+  if (!supabase) return { movies: [], total: 0 };
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -162,6 +184,8 @@ export async function getMoviesPaginated(page: number, pageSize = 24) {
 
 // Get total movie count
 export async function getMovieCount() {
+  if (!supabase) return 0;
+
   const { count, error } = await supabase
     .from("movies")
     .select("*", { count: "exact", head: true });
@@ -171,6 +195,42 @@ export async function getMovieCount() {
     return 0;
   }
   return count || 0;
+}
+
+// Search movies by title containing keyword
+export async function searchMoviesByKeyword(keyword: string) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("movies")
+    .select("*")
+    .ilike("title", `%${keyword}%`)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error searching movies:", error);
+    return [];
+  }
+  return data as MovieRow[];
+}
+
+// Get movies that might be series
+export async function getSeriesMovies() {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("movies")
+    .select("*")
+    .or(
+      "title.ilike.%series%,title.ilike.%season%,title.ilike.%episode%,title.ilike.%S01%,title.ilike.%S02%"
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching series:", error);
+    return getAllMovies();
+  }
+  return data as MovieRow[];
 }
 
 // Helper to convert MovieRow to frontend Movie type

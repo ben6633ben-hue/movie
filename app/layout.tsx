@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="clckd" content="481d5a92d15c19c6050088ea6046ffde" />
+        <meta name="clckd" content="038424b98cf1117cee61838689ba3caf" />
       </head>
       <body>{children}</body>
     </html>

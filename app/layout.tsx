@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "LK21 (Layarkaca21) Nonton Film Sub Indo Terbaru dan Terpopuler Free Streaming",
@@ -15,10 +16,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="clckd" content="038424b98cf1117cee61838689ba3caf" />
-        <meta name="google-site-verification" content="DRcx5WzqYx06VhCMcIX9bwR3LNYUGvIhzWZdAwe4EFU" />
+        <meta name="clckd" content="481d5a92d15c19c6050088ea6046ffde" />
+        <meta
+          name="google-site-verification"
+          content="DRcx5WzqYx06VhCMcIX9bwR3LNYUGvIhzWZdAwe4EFU"
+        />
       </head>
-      <body>{children}</body>
+      <body>
+      {/*Google tag (gtag.js)*/}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-NQVPW4ME40"
+        strategy="afterInteractive"
+      />
+      <Script id="ga-setup" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){window.dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-NQVPW4ME40');
+        `}
+      </Script>
+
+        {children}
+      </body>
     </html>
   );
 }

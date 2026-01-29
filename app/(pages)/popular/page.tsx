@@ -8,7 +8,8 @@ import MovieCard from "@/app/components/MovieCard";
 import PageHeader from "@/app/components/PageHeader";
 import Pagination from "@/app/components/Pagination";
 import { Movie } from "@/types/movie";
-import { getFeaturedMovies, toMovies } from "@/lib/supabase";
+import { FEATURED_TITLE_PRIORITY } from "@/lib/featured";
+import { getFeaturedMoviesForHomepage, toMovies } from "@/lib/supabase";
 
 const ITEMS_PER_PAGE = 24;
 
@@ -20,7 +21,7 @@ export default function PopularPage() {
   useEffect(() => {
     async function fetchMovies() {
       try {
-        const data = await getFeaturedMovies(100);
+        const data = await getFeaturedMoviesForHomepage(FEATURED_TITLE_PRIORITY, 100);
         setMovies(toMovies(data));
       } catch (error) {
         console.error("Error fetching movies:", error);

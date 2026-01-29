@@ -11,20 +11,68 @@ import FeaturedButton from "./components/FeaturedButton";
 import AdBanner from "./components/AdBanner";
 import Footer from "./components/Footer";
 import { Movie } from "@/types/movie";
-import { getAllMovies, toMovies } from "@/lib/supabase";
+import { FEATURED_TITLE_PRIORITY } from "@/lib/featured";
+import {
+  getFeaturedMoviesForHomepage,
+  getMoviesByYearsSample,
+  getMoviesByGenreSample,
+  getMoviesByGenreAndYearsSample,
+  toMovies,
+} from "@/lib/supabase";
+
+const TERBARU_YEARS = ["2026", "2025"];
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
 
 export default function Home() {
-  const [allMovies, setAllMovies] = useState<Movie[]>([]);
+  const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]);
+  const [latestMovies, setLatestMovies] = useState<Movie[]>([]);
+  const [actionMovies, setActionMovies] = useState<Movie[]>([]);
+  const [horrorMovies, setHorrorMovies] = useState<Movie[]>([]);
+  const [romanceMovies, setRomanceMovies] = useState<Movie[]>([]);
+  const [comedyMovies, setComedyMovies] = useState<Movie[]>([]);
+  const [dramaMovies, setDramaMovies] = useState<Movie[]>([]);
+  const [thrillerMovies, setThrillerMovies] = useState<Movie[]>([]);
+  const [familyMovies, setFamilyMovies] = useState<Movie[]>([]);
+  const [gridMovies, setGridMovies] = useState<Movie[]>([]);
+  const [recMovies, setRecMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchMovies() {
       try {
-        const data = await getAllMovies();
-        setAllMovies(toMovies(data));
+        const [featured, latest, action, horror, romance, comedy, drama, thriller, family] =
+          await Promise.all([
+            getFeaturedMoviesForHomepage(FEATURED_TITLE_PRIORITY, 15),
+            getMoviesByYearsSample(TERBARU_YEARS, 50),
+            getMoviesByGenreAndYearsSample("Action", TERBARU_YEARS, 15),
+            getMoviesByGenreAndYearsSample("Horror", TERBARU_YEARS, 15),
+            getMoviesByGenreAndYearsSample("Romance", TERBARU_YEARS, 15),
+            getMoviesByGenreAndYearsSample("Comedy", TERBARU_YEARS, 15),
+            getMoviesByGenreAndYearsSample("Drama", TERBARU_YEARS, 15),
+            getMoviesByGenreAndYearsSample("Thriller", TERBARU_YEARS, 15),
+            getMoviesByGenreSample("Family", 15),
+          ]);
+        setFeaturedMovies(toMovies(featured));
+        const latestList = toMovies(latest);
+        setLatestMovies(latestList.slice(0, 15));
+        setGridMovies(latestList.slice(0, 48));
+        setRecMovies(shuffle(latestList).slice(0, 15));
+        setActionMovies(toMovies(action));
+        setHorrorMovies(toMovies(horror));
+        setRomanceMovies(toMovies(romance));
+        setComedyMovies(toMovies(comedy));
+        setDramaMovies(toMovies(drama));
+        setThrillerMovies(toMovies(thriller));
+        setFamilyMovies(toMovies(family));
       } catch (error) {
-        // This catch block handles errors thrown from getAllMovies
-        // Most errors are already handled inside getAllMovies, but we catch any unexpected ones
         console.error("Unexpected error in fetchMovies:", {
           error,
           message: error instanceof Error ? error.message : String(error),
@@ -36,33 +84,6 @@ export default function Home() {
     }
     fetchMovies();
   }, []);
-
-  // Filter movies by genre
-  const getByGenre = (genre: string, limit = 15) => {
-    return allMovies
-      .filter((m) => m.genre?.toLowerCase().includes(genre.toLowerCase()))
-      .slice(0, limit);
-  };
-
-  // Get featured (highest rated)
-  const featuredMovies = [...allMovies]
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 15);
-
-  // Get latest movies
-  const latestMovies = allMovies.slice(0, 15);
-
-  // Filter by different genres
-  const actionMovies = getByGenre("action");
-  const horrorMovies = getByGenre("horror");
-  const romanceMovies = getByGenre("romance");
-  const comedyMovies = getByGenre("comedy");
-  const dramaMovies = getByGenre("drama");
-  const thrillerMovies = getByGenre("thriller");
-  const familyMovies = getByGenre("family");
-
-  // For grid section - all movies
-  const allMoviesForGrid = allMovies.slice(0, 48);
 
   if (loading) {
     return (
@@ -141,7 +162,7 @@ export default function Home() {
       {/* Rekomendasi */}
       <MovieSection
         title="Rekomendasi Untukmu"
-        movies={[...allMovies].sort(() => Math.random() - 0.5).slice(0, 15)}
+        movies={recMovies}
         viewAllText="SEMUA"
         viewAllLink="/rekomendasi"
         boxed={true}
@@ -200,13 +221,13 @@ export default function Home() {
       {/* Ad Banner 2 */}
       <AdBanner text="Nonton Film Gratis di Lk21" />
 
-      {/* Daftar Lengkap Film Terbaru - Grid Layout */}
+      {/* Daftar Lengkap Film Terbaru - Grid Layout (2025/2026) */}
       <MovieGrid
         title="Daftar Lengkap Film Terbaru"
-        movies={allMoviesForGrid}
+        movies={gridMovies}
         initialCount={24}
         increment={12}
-        viewAllLink="/movies"
+        viewAllLink="/popular/new"
       />
 
       {/* Footer */}

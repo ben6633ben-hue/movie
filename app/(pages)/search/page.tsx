@@ -9,7 +9,7 @@ import MovieCard from "@/app/components/MovieCard";
 import PageHeader from "@/app/components/PageHeader";
 import Pagination from "@/app/components/Pagination";
 import { Movie } from "@/types/movie";
-import { searchMovies, toMovies } from "@/lib/supabase";
+import { searchMoviesPaginated, toMovies } from "@/lib/supabase";
 
 const ITEMS_PER_PAGE = 24;
 
@@ -17,36 +17,45 @@ function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q || q.length < 2) {
+      setMovies([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     async function fetchResults() {
-      if (!query) {
-        setMovies([]);
-        setLoading(false);
-        return;
-      }
-      
       setLoading(true);
       try {
-        const data = await searchMovies(query);
-        setMovies(toMovies(data));
+        const { movies: rows, total: totalCount } = await searchMoviesPaginated(
+          q,
+          currentPage,
+          ITEMS_PER_PAGE
+        );
+        setMovies(toMovies(rows));
+        setTotal(totalCount);
       } catch (error) {
         console.error("Error searching movies:", error);
         setMovies([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
     }
     fetchResults();
-    setCurrentPage(1);
-  }, [query]);
+  }, [query, currentPage]);
 
-  // Pagination
-  const totalPages = Math.ceil(movies.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedMovies = movies.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+  const paginatedMovies = movies;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -76,7 +85,7 @@ function SearchResults() {
 
       <PageHeader 
         breadcrumb={`Pencarian "${query}"`}
-        totalItems={movies.length}
+        totalItems={total}
         currentPage={currentPage}
         totalPages={totalPages}
       />

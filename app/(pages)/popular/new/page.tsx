@@ -8,33 +8,41 @@ import MovieCard from "@/app/components/MovieCard";
 import PageHeader from "@/app/components/PageHeader";
 import Pagination from "@/app/components/Pagination";
 import { Movie } from "@/types/movie";
-import { getLatestMovies, toMovies } from "@/lib/supabase";
+import { getMoviesByYearsPaginated, toMovies } from "@/lib/supabase";
 
 const ITEMS_PER_PAGE = 24;
+const TERBARU_YEARS = ["2026", "2025"];
 
 export default function NewUploadPage() {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function fetchMovies() {
+      setLoading(true);
       try {
-        const data = await getLatestMovies(100);
-        setMovies(toMovies(data));
+        const { movies: rows, total: totalCount } = await getMoviesByYearsPaginated(
+          TERBARU_YEARS,
+          currentPage,
+          ITEMS_PER_PAGE
+        );
+        setMovies(toMovies(rows));
+        setTotal(totalCount);
       } catch (error) {
         console.error("Error fetching movies:", error);
+        setMovies([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
     }
     fetchMovies();
-  }, []);
+  }, [currentPage]);
 
-  // Pagination
-  const totalPages = Math.ceil(movies.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedMovies = movies.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+  const paginatedMovies = movies;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -63,8 +71,8 @@ export default function NewUploadPage() {
       <CategoryBar />
 
       <PageHeader 
-        breadcrumb="Baru Diupload"
-        totalItems={movies.length}
+        breadcrumb="Baru Diupload (2025/2026)"
+        totalItems={total}
         currentPage={currentPage}
         totalPages={totalPages}
       />

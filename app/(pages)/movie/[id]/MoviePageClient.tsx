@@ -7,8 +7,17 @@ import CategoryBar from "@/app/components/CategoryBar";
 import Footer from "@/app/components/Footer";
 import MovieSection from "@/app/components/MovieSection";
 import { Movie } from "@/types/movie";
-import { getMovieById, getMoviesByGenre, toMovie, toMovies } from "@/lib/supabase";
+import { getMovieById, getMoviesByGenreSample, getLatestMovies, toMovie, toMovies } from "@/lib/supabase";
 import { StarIcon, PlayIcon, ClockIcon, CalendarIcon } from "@heroicons/react/24/solid";
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
 
 export default function MoviePageClient({ movieId }: { movieId: number }) {
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -24,16 +33,12 @@ export default function MoviePageClient({ movieId }: { movieId: number }) {
           const movieData = toMovie(data);
           setMovie(movieData);
 
-          // Fetch related movies by genre
-          if (movieData.genre) {
-            const mainGenre = movieData.genre.split(",")[0].trim();
-            const related = await getMoviesByGenre(mainGenre);
-            setRelatedMovies(
-              toMovies(related)
-                .filter((m) => m.id !== movieId)
-                .slice(0, 10)
-            );
-          }
+          // Fetch a small pool (by genre or latest), then randomise for Film Serupa — no full DB scan
+          const pool = movieData.genre
+            ? await getMoviesByGenreSample(movieData.genre.split(",")[0].trim(), 50)
+            : await getLatestMovies(50);
+          const list = toMovies(pool).filter((m) => m.id !== movieId);
+          setRelatedMovies(shuffleArray(list).slice(0, 10));
         }
       } catch (error) {
         console.error("Error fetching movie:", error);
@@ -195,10 +200,11 @@ export default function MoviePageClient({ movieId }: { movieId: number }) {
           title="Film Serupa"
           movies={relatedMovies}
           viewAllText="SEMUA"
-          viewAllLink={`/genre/${movie.genre
-            .split(",")[0]
-            .trim()
-            .toLowerCase()}`}
+          viewAllLink={
+            movie.genre
+              ? `/genre/${movie.genre.split(",")[0].trim().toLowerCase()}`
+              : "/"
+          }
           boxed={true}
         />
       )}

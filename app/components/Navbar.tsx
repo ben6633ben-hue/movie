@@ -65,26 +65,30 @@ const dropdownData: Record<string, { items: string[]; footer?: string }> = {
   },
   Negara: {
     items: [
-      "Amerika",
-      "Jepang",
+      "United States",
+      "United Kingdom",
       "Australia",
-      "Kanada",
-      "Cina",
-      "Korea",
-      "Perancis",
-      "Malaysia",
-      "Jerman",
-      "Meksiko",
-      "Hongkong",
-      "Pilipina",
-      "Indonesia",
-      "Romania",
+      "Canada",
+      "China",
+      "France",
+      "Germany",
+      "Hong Kong",
       "India",
-      "Rusia",
-      "Inggris",
+      "Indonesia",
+      "Italy",
+      "Japan",
+      "Korea",
+      "Malaysia",
+      "Mexico",
+      "Philippines",
+      "Romania",
+      "Russia",
       "Taiwan",
-      "Itali",
-      "Tailand",
+      "Thailand",
+      "Spain",
+      "Turkey",
+      "Vietnam",
+      "Netherlands",
     ],
     footer: "NEGARA LAINNYA",
   },
@@ -178,8 +182,15 @@ export default function Navbar() {
           rating: "/popular/rating",
         };
         return populerMap[itemLower] || "/popular";
-      case "Negara":
-        return `/country/${itemLower}`;
+      case "Negara": {
+        const countrySlugMap: Record<string, string> = {
+          "united states": "united-states",
+          "united kingdom": "united-kingdom",
+          "hong kong": "hong-kong",
+        };
+        const slug = countrySlugMap[itemLower] ?? itemLower.replace(/\s+/g, "-");
+        return `/country/${slug}`;
+      }
       case "Tahun":
         return `/year/${item}`;
       case "More":

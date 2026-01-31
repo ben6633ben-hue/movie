@@ -19,10 +19,31 @@ const genres = [
   "Documentary", "Drama", "Family", "Fantasy", "History", "Horror",
   "Musical", "Mystery", "Romance", "Sci-Fi", "Sport", "Thriller", "War", "Western"
 ];
-const countries = [
-  "Amerika", "Australia", "Cina", "Perancis", "Jerman", "Hongkong",
-  "Indonesia", "India", "Inggris", "Itali", "Jepang", "Kanada",
-  "Korea", "Malaysia", "Meksiko", "Pilipina", "Romania", "Rusia", "Taiwan", "Thailand"
+const countries: { name: string; slug: string }[] = [
+  { name: "United States", slug: "united-states" },
+  { name: "United Kingdom", slug: "united-kingdom" },
+  { name: "Australia", slug: "australia" },
+  { name: "China", slug: "china" },
+  { name: "France", slug: "france" },
+  { name: "Germany", slug: "germany" },
+  { name: "Hong Kong", slug: "hong-kong" },
+  { name: "Indonesia", slug: "indonesia" },
+  { name: "India", slug: "india" },
+  { name: "Italy", slug: "italy" },
+  { name: "Japan", slug: "japan" },
+  { name: "Canada", slug: "canada" },
+  { name: "Korea", slug: "korea" },
+  { name: "Malaysia", slug: "malaysia" },
+  { name: "Mexico", slug: "mexico" },
+  { name: "Philippines", slug: "philippines" },
+  { name: "Romania", slug: "romania" },
+  { name: "Russia", slug: "russia" },
+  { name: "Taiwan", slug: "taiwan" },
+  { name: "Thailand", slug: "thailand" },
+  { name: "Spain", slug: "spain" },
+  { name: "Turkey", slug: "turkey" },
+  { name: "Vietnam", slug: "vietnam" },
+  { name: "Netherlands", slug: "netherlands" },
 ];
 
 export default function PageHeader({ 
@@ -49,7 +70,7 @@ export default function PageHeader({
     // Check if any filter is actually selected
     const hasGenre1 = selectedGenre1 && selectedGenre1.trim() !== "" && genres.includes(selectedGenre1);
     const hasGenre2 = selectedGenre2 && selectedGenre2.trim() !== "" && genres.includes(selectedGenre2);
-    const hasCountry = selectedCountry && selectedCountry.trim() !== "" && countries.includes(selectedCountry);
+    const hasCountry = selectedCountry && selectedCountry.trim() !== "";
     const hasYear = selectedYear && selectedYear.trim() !== "" && years.includes(selectedYear);
     
     // Priority: Genre > Country > Year > Type
@@ -58,7 +79,7 @@ export default function PageHeader({
     } else if (hasGenre2) {
       router.push(`/genre/${selectedGenre2.toLowerCase().replace(/ /g, "-")}`);
     } else if (hasCountry) {
-      router.push(`/country/${selectedCountry.toLowerCase()}`);
+      router.push(`/country/${selectedCountry}`);
     } else if (hasYear) {
       router.push(`/year/${selectedYear}`);
     } else if (selectedType === "Series") {
@@ -171,9 +192,9 @@ export default function PageHeader({
                   onChange={(e) => setSelectedCountry(e.target.value)}
                   className="filter-select"
                 >
-                  <option value="">Negara</option>
+                  <option value="">Country</option>
                   {countries.map((country) => (
-                    <option key={country} value={country}>{country}</option>
+                    <option key={country.slug} value={country.slug}>{country.name}</option>
                   ))}
                 </select>
                 <ChevronDownIcon className="select-icon" />

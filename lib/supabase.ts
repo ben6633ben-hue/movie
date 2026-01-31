@@ -1,17 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * SECURITY NOTE:
- * This file uses the ANON KEY which should only have READ permissions.
- *
- * IMPORTANT:
- * - ✅ This key is safe to expose in frontend code
- * - ✅ Only SELECT (read) operations are performed here
- * - ❌ Never use SERVICE_ROLE_KEY in frontend code
- * - 🔒 Row Level Security (RLS) must be enabled in Supabase
- *
- * See SUPABASE_SECURITY.md for security configuration.
- */
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -168,6 +156,33 @@ export async function getMoviesByGenrePaginated(
     .range(from, to);
   if (error) {
     console.error("Error fetching movies by genre (paginated):", error.message);
+    return { movies: [], total: 0 };
+  }
+  return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
+}
+
+/** Paginated: movies matching any of the given genre terms (OR). For “Inggris” = UK + US + etc. */
+export async function getMoviesByGenreTermsPaginated(
+  terms: string[],
+  page: number,
+  pageSize = 24
+): Promise<{ movies: MovieRow[]; total: number }> {
+  if (!supabase || terms.length === 0) return { movies: [], total: 0 };
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const orClause = terms
+    .map((t) => `genre.ilike.%${t.replace(/%/g, "")}%`)
+    .join(",");
+  const { data, error, count } = await supabase
+    .from("movies")
+    .select("*", { count: "exact" })
+    .not("image_url", "is", null)
+    .neq("image_url", "")
+    .or(orClause)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (error) {
+    console.error("Error getMoviesByGenreTermsPaginated:", error.message);
     return { movies: [], total: 0 };
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };

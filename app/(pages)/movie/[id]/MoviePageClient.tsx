@@ -214,3 +214,4 @@ export default function MoviePageClient({ movieId }: { movieId: number }) {
   );
 }
 
+

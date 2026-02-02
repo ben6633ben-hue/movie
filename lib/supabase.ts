@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 
@@ -57,95 +58,27 @@ export interface MovieRow {
   updatedat: string;
 }
 
-// Fetch all movies
-export async function getAllMovies() {
-  if (!supabase) {
-    console.error(
-      "Error fetching movies: Supabase client not initialized. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables."
-    );
-    return [];
-  }
+// ——— Data transfer limits (cap payloads to limit bandwidth) ———
+const DATA_MAX_PAGE_SIZE = 100;
+const MAX_LIST_RESULTS = 200;
 
-  try {
-    const { data, error } = await supabase
-      .from("movies")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching movies:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
-      return [];
-    }
-    return data as MovieRow[];
-  } catch (err) {
-    // Handle network errors and other exceptions
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorName = err instanceof Error ? err.name : "UnknownError";
-
-    console.error("Error fetching movies (network/exception):", {
-      name: errorName,
-      message: errorMessage,
-      error: err,
-    });
-
-    // Check for common network errors
-    if (
-      errorMessage.includes("ERR_NAME_NOT_RESOLVED") ||
-      errorMessage.includes("Failed to fetch") ||
-      errorMessage.includes("NetworkError")
-    ) {
-      console.error(
-        "Network error detected. Please check your NEXT_PUBLIC_SUPABASE_URL environment variable."
-      );
-    }
-
-    return [];
-  }
+function capPageSize(size: number): number {
+  return Math.min(Math.max(1, size), DATA_MAX_PAGE_SIZE);
+}
+function capListLimit(limit: number): number {
+  return Math.min(Math.max(1, limit), MAX_LIST_RESULTS);
 }
 
-// Fetch movies by genre (unbounded; prefer getMoviesByGenrePaginated or getMoviesByGenreSample)
-export async function getMoviesByGenre(genre: string) {
-  if (!supabase) {
-    console.error(
-      "Error fetching movies by genre: Supabase client not initialized."
-    );
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .ilike("genre", `%${genre}%`)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching movies by genre:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return [];
-  }
-  return data as MovieRow[];
-}
-
-/** Paginated genre list — fast, no full table scan. */
-export async function getMoviesByGenrePaginated(
+/** Paginated genre list — fast, no full table scan. Cached per request. Page size capped. */
+async function getMoviesByGenrePaginatedImpl(
   genre: string,
   page: number,
   pageSize = 24
 ) {
   if (!supabase) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
   const { data, error, count } = await supabase
     .from("movies")
     .select("*", { count: "exact" })
@@ -160,33 +93,7 @@ export async function getMoviesByGenrePaginated(
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
-
-/** Paginated: movies matching any of the given genre terms (OR). For “Inggris” = UK + US + etc. */
-export async function getMoviesByGenreTermsPaginated(
-  terms: string[],
-  page: number,
-  pageSize = 24
-): Promise<{ movies: MovieRow[]; total: number }> {
-  if (!supabase || terms.length === 0) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  const orClause = terms
-    .map((t) => `genre.ilike.%${t.replace(/%/g, "")}%`)
-    .join(",");
-  const { data, error, count } = await supabase
-    .from("movies")
-    .select("*", { count: "exact" })
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .or(orClause)
-    .order("created_at", { ascending: false })
-    .range(from, to);
-  if (error) {
-    console.error("Error getMoviesByGenreTermsPaginated:", error.message);
-    return { movies: [], total: 0 };
-  }
-  return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
-}
+export const getMoviesByGenrePaginated = cache(getMoviesByGenrePaginatedImpl);
 
 /** Fetch a limited sample of movies by genre for “similar” section. Keeps query small and fast. */
 export async function getMoviesByGenreSample(genre: string, limit = 50) {
@@ -196,7 +103,7 @@ export async function getMoviesByGenreSample(genre: string, limit = 50) {
     );
     return [];
   }
-
+  const capped = capListLimit(limit);
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -204,7 +111,7 @@ export async function getMoviesByGenreSample(genre: string, limit = 50) {
     .neq("image_url", "")
     .ilike("genre", `%${genre}%`)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(capped);
 
   if (error) {
     console.error("Error fetching movies by genre sample:", {
@@ -218,13 +125,14 @@ export async function getMoviesByGenreSample(genre: string, limit = 50) {
   return data as MovieRow[];
 }
 
-/** Genre + years (e.g. Drama/Thriller Terbaru limited to 2025/2026). */
+/** Genre + years (e.g. Drama/Thriller Terbaru limited to 2025/2026). Limit capped. */
 export async function getMoviesByGenreAndYearsSample(
   genre: string,
   years: string[],
   limit = 15
 ): Promise<MovieRow[]> {
   if (!supabase || years.length === 0) return [];
+  const capped = capListLimit(limit);
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -233,7 +141,7 @@ export async function getMoviesByGenreAndYearsSample(
     .ilike("genre", `%${genre}%`)
     .in("year", years)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(capped);
   if (error) {
     console.error("Error getMoviesByGenreAndYearsSample:", error.message);
     return [];
@@ -241,42 +149,16 @@ export async function getMoviesByGenreAndYearsSample(
   return (data ?? []) as MovieRow[];
 }
 
-// Fetch movies by year (unbounded; prefer getMoviesByYearPaginated)
-export async function getMoviesByYear(year: string) {
-  if (!supabase) {
-    console.error(
-      "Error fetching movies by year: Supabase client not initialized."
-    );
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .eq("year", year)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching movies by year:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return [];
-  }
-  return data as MovieRow[];
-}
-
-/** Paginated year list — fast. */
-export async function getMoviesByYearPaginated(
+/** Paginated year list — fast. Cached per request. Page size capped. */
+async function getMoviesByYearPaginatedImpl(
   year: string,
   page: number,
   pageSize = 24
 ) {
   if (!supabase) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
   const { data, error, count } = await supabase
     .from("movies")
     .select("*", { count: "exact" })
@@ -291,9 +173,10 @@ export async function getMoviesByYearPaginated(
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
+export const getMoviesByYearPaginated = cache(getMoviesByYearPaginatedImpl);
 
-// Fetch single movie by ID
-export async function getMovieById(id: number) {
+// Fetch single movie by ID (cached per request to dedupe metadata + page)
+async function getMovieByIdImpl(id: number) {
   if (!supabase) {
     console.error("Error fetching movie: Supabase client not initialized.");
     return null;
@@ -317,6 +200,8 @@ export async function getMovieById(id: number) {
   return data as MovieRow;
 }
 
+export const getMovieById = cache(getMovieByIdImpl);
+
 /** Row returned by search_movies_by_title RPC (includes total_count). */
 interface SearchMovieRow extends MovieRow {
   total_count?: number;
@@ -329,10 +214,11 @@ async function searchMoviesByTitleRpc(
   pageSize: number
 ): Promise<{ rows: MovieRow[]; total: number }> {
   if (!supabase) return { rows: [], total: 0 };
+  const cappedSize = Math.min(Math.max(1, pageSize), SEARCH_MAX_PAGE_SIZE);
   const { data, error } = await supabase.rpc("search_movies_by_title", {
     search_query: query,
     page_num: pageNum,
-    page_size: pageSize,
+    page_size: cappedSize,
   });
   if (error) {
     console.error("Error searching movies (RPC):", error.message);
@@ -364,8 +250,9 @@ async function searchMoviesPaginatedFallback(
   pageSize: number
 ): Promise<{ movies: MovieRow[]; total: number }> {
   if (!supabase) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const cappedSize = Math.min(Math.max(1, pageSize), SEARCH_MAX_PAGE_SIZE);
+  const from = (page - 1) * cappedSize;
+  const to = from + cappedSize - 1;
   const patterns = fallbackSearchPatterns(query);
   // OR multiple ilike patterns: "spiderman" and "spider%man" so "Spider-Man 3" matches
   const orClause = patterns.map((p) => `title.ilike.${p}`).join(",");
@@ -384,22 +271,15 @@ async function searchMoviesPaginatedFallback(
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
 
-// Search movies by title — normalized when RPC exists; else ilike. Trimmed; skips very short; limited to 200.
-export async function searchMovies(query: string, limit = 200) {
-  const q = query.trim();
-  if (q.length < SEARCH_MIN_LENGTH) return [];
-  const pageSize = Math.min(limit, 200);
-  const { rows, total } = await searchMoviesByTitleRpc(q, 1, pageSize);
-  if (total >= 0) return rows;
-  const { movies } = await searchMoviesPaginatedFallback(q, 1, pageSize);
-  return movies;
-}
-
 /** Min search query length to avoid heavy DB work for single chars. */
 const SEARCH_MIN_LENGTH = 2;
 
-/** Paginated search — uses RPC (normalized title) when available, else ilike fallback. Trimmed; skips very short queries. */
-export async function searchMoviesPaginated(
+/** Max rows per search request to limit data transfer (paginated and non-paginated). */
+const SEARCH_MAX_PAGE_SIZE = 100;
+const SEARCH_MAX_RESULTS = 100;
+
+/** Paginated search — uses RPC (normalized title) when available, else ilike fallback. Cached per request. */
+async function searchMoviesPaginatedImpl(
   query: string,
   page: number,
   pageSize = 24
@@ -413,8 +293,9 @@ export async function searchMoviesPaginated(
   const result = await searchMoviesPaginatedFallback(q, page, pageSize);
   return { movies: result.movies, total: result.total };
 }
+export const searchMoviesPaginated = cache(searchMoviesPaginatedImpl);
 
-// Fetch featured movies (high rating)
+// Fetch featured movies (high rating). Limit capped.
 export async function getFeaturedMovies(limit = 15) {
   if (!supabase) {
     console.error(
@@ -422,14 +303,14 @@ export async function getFeaturedMovies(limit = 15) {
     );
     return [];
   }
-
+  const capped = capListLimit(limit);
   const { data, error } = await supabase
     .from("movies")
     .select("*")
     .not("image_url", "is", null)
     .neq("image_url", "")
     .order("rating", { ascending: false })
-    .limit(limit);
+    .limit(capped);
 
   if (error) {
     console.error("Error fetching featured movies:", {
@@ -443,12 +324,13 @@ export async function getFeaturedMovies(limit = 15) {
   return data as MovieRow[];
 }
 
-/** Fetch movies whose title matches any of the given strings (ilike %title%). Batched to avoid long URLs. */
+/** Fetch movies whose title matches any of the given strings (ilike %title%). Limit capped for data transfer. */
 export async function getMoviesMatchingTitles(
   titles: string[],
   limit = 80
 ): Promise<MovieRow[]> {
   if (!supabase || titles.length === 0) return [];
+  const capped = capListLimit(limit);
   const BATCH = 12;
   const results: MovieRow[] = [];
   const seen = new Set<number>();
@@ -464,7 +346,7 @@ export async function getMoviesMatchingTitles(
       .neq("image_url", "")
       .or(orClause)
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(capped);
     if (error) {
       console.error("Error getMoviesMatchingTitles:", error.message);
       continue;
@@ -480,12 +362,13 @@ export async function getMoviesMatchingTitles(
   return results;
 }
 
-/** Fetch movies from given years (e.g. 2026, 2025), limited. */
+/** Fetch movies from given years (e.g. 2026, 2025). Limit capped. */
 export async function getMoviesByYearsSample(
   years: string[],
   limit = 30
 ): Promise<MovieRow[]> {
   if (!supabase || years.length === 0) return [];
+  const capped = capListLimit(limit);
   const { data, error } = await supabase
     .from("movies")
     .select("*")
@@ -493,7 +376,7 @@ export async function getMoviesByYearsSample(
     .neq("image_url", "")
     .in("year", years)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(capped);
   if (error) {
     console.error("Error getMoviesByYearsSample:", error.message);
     return [];
@@ -501,15 +384,16 @@ export async function getMoviesByYearsSample(
   return (data ?? []) as MovieRow[];
 }
 
-/** Paginated movies from given years (e.g. 2026, 2025) — for Film Terbaru / Baru Diupload. */
-export async function getMoviesByYearsPaginated(
+/** Paginated movies from given years — for Film Terbaru / Baru Diupload. Page size capped. */
+async function getMoviesByYearsPaginatedImpl(
   years: string[],
   page: number,
   pageSize = 24
 ): Promise<{ movies: MovieRow[]; total: number }> {
   if (!supabase || years.length === 0) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
   const { data, error, count } = await supabase
     .from("movies")
     .select("*", { count: "exact" })
@@ -524,6 +408,7 @@ export async function getMoviesByYearsPaginated(
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
+export const getMoviesByYearsPaginated = cache(getMoviesByYearsPaginatedImpl);
 
 /** Normalize for title matching: lowercase, keep alphanumeric. */
 function normalizeTitle(s: string): string {
@@ -596,7 +481,7 @@ export async function getFeaturedMoviesForHomepage(
   return featured;
 }
 
-// Fetch latest movies
+// Fetch latest movies. Limit capped for data transfer.
 export async function getLatestMovies(limit = 20) {
   if (!supabase) {
     console.error(
@@ -604,14 +489,14 @@ export async function getLatestMovies(limit = 20) {
     );
     return [];
   }
-
+  const capped = capListLimit(limit);
   const { data, error } = await supabase
     .from("movies")
     .select("*")
     .not("image_url", "is", null)
     .neq("image_url", "")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(capped);
 
   if (error) {
     console.error("Error fetching latest movies:", {
@@ -625,47 +510,17 @@ export async function getLatestMovies(limit = 20) {
   return data as MovieRow[];
 }
 
-// Fetch movies by quality (HD, CAM, etc.) — optional limit to avoid full scan
-export async function getMoviesByQuality(quality: string, limit = 200) {
-  if (!supabase) {
-    console.error(
-      "Error fetching movies by quality: Supabase client not initialized."
-    );
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .ilike("quality", `%${quality}%`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching movies by quality:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return [];
-  }
-  return data as MovieRow[];
-}
-
-// Fetch movies with pagination
-export async function getMoviesPaginated(page: number, pageSize = 24) {
+// Fetch movies with pagination. Cached per request. Page size capped.
+async function getMoviesPaginatedImpl(page: number, pageSize = 24) {
   if (!supabase) {
     console.error(
       "Error fetching paginated movies: Supabase client not initialized."
     );
     return { movies: [], total: 0 };
   }
-
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
 
   const { data, error, count } = await supabase
     .from("movies")
@@ -686,15 +541,17 @@ export async function getMoviesPaginated(page: number, pageSize = 24) {
   }
   return { movies: data as MovieRow[], total: count || 0 };
 }
+export const getMoviesPaginated = cache(getMoviesPaginatedImpl);
 
 /** All movies ordered by year desc, one page — for “release” listing. */
-export async function getMoviesOrderedByYearPaginated(
+async function getMoviesOrderedByYearPaginatedImpl(
   page: number,
   pageSize = 24
 ) {
   if (!supabase) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
   const { data, error, count } = await supabase
     .from("movies")
     .select("*", { count: "exact" })
@@ -708,94 +565,16 @@ export async function getMoviesOrderedByYearPaginated(
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
+export const getMoviesOrderedByYearPaginated = cache(
+  getMoviesOrderedByYearPaginatedImpl
+);
 
-// Get total movie count
-export async function getMovieCount() {
-  if (!supabase) {
-    console.error(
-      "Error getting movie count: Supabase client not initialized."
-    );
-    return 0;
-  }
-
-  const { count, error } = await supabase
-    .from("movies")
-    .select("*", { count: "exact", head: true });
-
-  if (error) {
-    console.error("Error getting movie count:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return 0;
-  }
-  return count || 0;
-}
-
-// Search movies by title containing keyword
-export async function searchMoviesByKeyword(keyword: string, limit = 200) {
-  if (!supabase) {
-    console.error("Error searching movies: Supabase client not initialized.");
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .ilike("title", `%${keyword}%`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error searching movies:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return [];
-  }
-  return data as MovieRow[];
-}
-
-// Get movies that might be series (unbounded; prefer getSeriesMoviesPaginated)
-export async function getSeriesMovies() {
-  if (!supabase) {
-    console.error("Error fetching series: Supabase client not initialized.");
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .or(
-      "title.ilike.%series%,title.ilike.%season%,title.ilike.%episode%,title.ilike.%S01%,title.ilike.%S02%"
-    )
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching series:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
-    return [];
-  }
-  return data as MovieRow[];
-}
-
-/** Paginated series list — fast. */
-export async function getSeriesMoviesPaginated(page: number, pageSize = 24) {
+/** Paginated series list — fast. Cached per request. Page size capped. */
+async function getSeriesMoviesPaginatedImpl(page: number, pageSize = 24) {
   if (!supabase) return { movies: [], total: 0 };
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const size = capPageSize(pageSize);
+  const from = (page - 1) * size;
+  const to = from + size - 1;
   const { data, error, count } = await supabase
     .from("movies")
     .select("*", { count: "exact" })
@@ -812,6 +591,7 @@ export async function getSeriesMoviesPaginated(page: number, pageSize = 24) {
   }
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
+export const getSeriesMoviesPaginated = cache(getSeriesMoviesPaginatedImpl);
 
 // Helper to convert MovieRow to frontend Movie type
 export function toMovie(row: MovieRow) {

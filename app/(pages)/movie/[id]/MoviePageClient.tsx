@@ -19,21 +19,28 @@ function shuffleArray<T>(arr: T[]): T[] {
   return out;
 }
 
-export default function MoviePageClient({ movieId }: { movieId: number }) {
-  const [movie, setMovie] = useState<Movie | null>(null);
+export default function MoviePageClient({
+  movieId,
+  initialMovie = null,
+}: {
+  movieId: number;
+  initialMovie?: Movie | null;
+}) {
+  const [movie, setMovie] = useState<Movie | null>(initialMovie ?? null);
   const [relatedMovies, setRelatedMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialMovie);
 
   useEffect(() => {
-    async function fetchMovie() {
-      setLoading(true);
+    async function fetchData() {
       try {
-        const data = await getMovieById(movieId);
-        if (data) {
-          const movieData = toMovie(data);
+        let movieData: Movie | null = initialMovie ?? null;
+        if (!movieData) {
+          const data = await getMovieById(movieId);
+          movieData = data ? toMovie(data) : null;
           setMovie(movieData);
+        }
 
-          // Fetch a small pool (by genre or latest), then randomise for Film Serupa — no full DB scan
+        if (movieData) {
           const pool = movieData.genre
             ? await getMoviesByGenreSample(movieData.genre.split(",")[0].trim(), 50)
             : await getLatestMovies(50);
@@ -46,8 +53,8 @@ export default function MoviePageClient({ movieId }: { movieId: number }) {
         setLoading(false);
       }
     }
-    fetchMovie();
-  }, [movieId]);
+    fetchData();
+  }, [movieId, initialMovie]);
 
   if (loading) {
     return (

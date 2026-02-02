@@ -1,29 +1,9 @@
 import type { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 import MoviePageClient from "./MoviePageClient";
+import { getMovieById, toMovie } from "@/lib/supabase";
 
-async function getMovieTitleById(id: number): Promise<string | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-
-  try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    const { data, error } = await supabase
-      .from("movies")
-      .select("title")
-      .eq("id", id)
-      .single();
-
-    if (error || !data?.title) return null;
-    return data.title as string;
-  } catch {
-    return null;
-  }
-}
+const CACHE_REVALIDATE_SECONDS = 60;
 
 export async function generateMetadata({
   params,
@@ -32,9 +12,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const movieId = Number(id);
-  const movieTitle = Number.isFinite(movieId)
-    ? await getMovieTitleById(movieId)
-    : null;
+  const movieRow =
+    Number.isFinite(movieId) ? await getMovieById(movieId) : null;
+  const movieTitle = movieRow?.title ?? null;
 
   const title = movieTitle
     ? `Nonton ${movieTitle} Gratis di LK21 (Layarkaca21) Sub Indo`
@@ -50,5 +30,19 @@ export default async function MoviePage({
 }) {
   const { id } = await params;
   const movieId = Number(id);
-  return <MoviePageClient movieId={movieId} />;
+  const movieRow = Number.isFinite(movieId)
+    ? await unstable_cache(
+        () => getMovieById(movieId),
+        ["movie", String(movieId)],
+        { revalidate: CACHE_REVALIDATE_SECONDS }
+      )()
+    : null;
+  const initialMovie = movieRow ? toMovie(movieRow) : null;
+  return (
+    <MoviePageClient
+      key={movieId}
+      movieId={movieId}
+      initialMovie={initialMovie}
+    />
+  );
 }

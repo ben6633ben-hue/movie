@@ -22,39 +22,27 @@ export default function AdBanner({
   if (useImage) {
     return (
       <div className="ad-banner-container">
-        <a
-          href={currentAd.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ad-banner-link"
-        >
-          {adError ? (
-            <div className="ad-banner">
-              <span className="ad-banner-text">{text}</span>
-            </div>
-          ) : (
-            <img
-              src={currentAd.media}
-              alt={currentAd.alt}
-              className="ad-banner-image"
-              onError={() => setAdError(true)}
-            />
-          )}
-        </a>
+        {adError ? (
+          <div className="ad-banner">
+            <span className="ad-banner-text">{text}</span>
+          </div>
+        ) : (
+          <img
+            src={currentAd.media}
+            alt={currentAd.alt}
+            className="ad-banner-image"
+            onError={() => setAdError(true)}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className="ad-banner-container">
-      <a
-        href={currentAd.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ad-banner"
-      >
+      <div className="ad-banner">
         <span className="ad-banner-text">{text}</span>
-      </a>
+      </div>
     </div>
   );
 }

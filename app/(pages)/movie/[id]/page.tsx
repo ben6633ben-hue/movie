@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import MoviePageClient from "./MoviePageClient";
 import { getMovieById, toMovie } from "@/lib/supabase";
+import { guardDataRoute } from "@/lib/requestGuard";
 
 const CACHE_REVALIDATE_SECONDS = 60;
 
@@ -29,6 +30,8 @@ export default async function MoviePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const guard = await guardDataRoute(`/movie/${id}`);
+  if (guard) return guard;
   const movieId = Number(id);
   const movieRow = Number.isFinite(movieId)
     ? await unstable_cache(

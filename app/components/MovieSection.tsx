@@ -44,7 +44,6 @@ export default function MovieSection({
 
   return (
     <section className={boxed ? "movie-section-boxed" : "movie-section"}>
-      {/* Header */}
       {(showTitle || showViewAll) && (
         <div className="flex items-center justify-between mb-4">
           {showTitle && <h2 className="section-title">{title}</h2>}
@@ -56,9 +55,7 @@ export default function MovieSection({
         </div>
       )}
 
-      {/* Container for arrows and cards */}
       <div className="relative group">
-        {/* Left Arrow */}
         <button
           onClick={() => scroll("left")}
           className="scroll-arrow left-0"
@@ -66,7 +63,6 @@ export default function MovieSection({
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
 
-        {/* Scrollable movie cards */}
         <div
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto pb-4 scrollbar-none scroll-smooth"
@@ -76,7 +72,6 @@ export default function MovieSection({
           ))}
         </div>
 
-        {/* Right Arrow */}
         <button
           onClick={() => scroll("right")}
           className="scroll-arrow right-0"

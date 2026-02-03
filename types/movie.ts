@@ -10,7 +10,6 @@ export interface Movie {
   isHD?: boolean;
   category?: string;
   country?: string;
-  // From Supabase
   url?: string;
   maturity?: string;
   quality?: string;

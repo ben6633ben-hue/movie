@@ -1,15 +1,13 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { headers } from "next/headers";
 
-// Rate limit: in-memory per edge instance. For global limits across instances, use Upstash Redis or similar.
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 80; // per IP per minute for data routes
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 80;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function getClientIp(request: NextRequest): string {
+function getClientIp(headersList: Headers): string {
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headersList.get("x-real-ip") ||
     "unknown"
   );
 }
@@ -30,7 +28,6 @@ function isDataRoute(pathname: string): boolean {
   );
 }
 
-// User-Agents that look like scripts/scrapers (block)
 const BLOCKED_UA_PATTERNS = [
   /^$/i,
   /^curl\//i,
@@ -62,12 +59,14 @@ function rateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
   }
   entry.count += 1;
   if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((entry.resetAt - now) / 1000),
+    };
   }
   return { allowed: true };
 }
 
-// Periodic cleanup of old entries (simple; runs on every request)
 function cleanupRateLimitMap(): void {
   const now = Date.now();
   if (rateLimitMap.size > 5000) {
@@ -77,22 +76,23 @@ function cleanupRateLimitMap(): void {
   }
 }
 
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  const userAgent = request.headers.get("user-agent");
+/** Bot check + rate limit for data routes. Call from server components. Returns 403/429 response or null. */
+export async function guardDataRoute(
+  pathname: string
+): Promise<Response | null> {
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent");
 
-  // Block requests with no or script-like User-Agent
   if (isLikelyBot(userAgent)) {
-    return new NextResponse("Forbidden", { status: 403 });
+    return new Response("Forbidden", { status: 403 });
   }
 
-  // Rate limit data-heavy routes
   if (isDataRoute(pathname)) {
     cleanupRateLimitMap();
-    const ip = getClientIp(request);
+    const ip = getClientIp(headersList);
     const { allowed, retryAfter } = rateLimit(ip);
     if (!allowed) {
-      return new NextResponse("Too Many Requests", {
+      return new Response("Too Many Requests", {
         status: 429,
         headers: retryAfter
           ? { "Retry-After": String(retryAfter) }
@@ -101,23 +101,5 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.next();
-
-  // Security headers
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  );
-  response.headers.set("X-XSS-Protection", "1; mode=block");
-
-  return response;
+  return null;
 }
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
-  ],
-};

@@ -8,7 +8,6 @@ import {
   ChevronDownIcon,
 } from "@heroicons/react/24/solid";
 import {
-  HeartIcon,
   FilmIcon,
   StarIcon,
   GlobeAltIcon,
@@ -113,7 +112,6 @@ export default function Navbar() {
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
 
-  // Check if mobile on mount
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
@@ -123,7 +121,6 @@ export default function Navbar() {
 
   const navItems = [
     { label: "Genre", icon: Bars3Icon },
-    // { label: "Series", icon: HeartIcon },
     { label: "Populer", icon: StarIcon },
     { label: "Negara", icon: GlobeAltIcon },
     { label: "Tahun", icon: CalendarIcon },
@@ -210,7 +207,6 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      {/* Logo */}
       <Link href="/" className="navbar-logo">
         <FilmIcon className="w-7 h-7 text-white" />
         <h1 className="text-white text-xl font-black tracking-tight">
@@ -232,7 +228,6 @@ export default function Navbar() {
         </button>
       </form>
 
-      {/* Nav items */}
       <div className="navbar-nav">
         {navItems.map((item) => (
           <div

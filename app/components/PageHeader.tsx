@@ -60,14 +60,11 @@ export default function PageHeader({
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const router = useRouter();
   
-  // Debug log - remove after testing
   const handleFilterClick = () => {
-    console.log("Filter values:", { selectedGenre1, selectedGenre2, selectedCountry, selectedYear, selectedType });
     handleFilter();
   };
 
   const handleFilter = () => {
-    // Check if any filter is actually selected
     const hasGenre1 = selectedGenre1 && selectedGenre1.trim() !== "" && genres.includes(selectedGenre1);
     const hasGenre2 = selectedGenre2 && selectedGenre2.trim() !== "" && genres.includes(selectedGenre2);
     const hasCountry = selectedCountry && selectedCountry.trim() !== "";
@@ -89,7 +86,6 @@ export default function PageHeader({
     } else if (selectedType === "Semua Film") {
       router.push("/movies");
     } else {
-      // No filter selected, go to all movies
       router.push("/movies");
     }
     setIsOpen(false);

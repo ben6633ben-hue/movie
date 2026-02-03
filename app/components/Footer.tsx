@@ -4,7 +4,6 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="footer-content">
-        {/* Tentang LK21 */}
         <div className="footer-section">
           <h3 className="footer-title">TENTANG LK21</h3>
           <p className="footer-text">
@@ -15,7 +14,6 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* Jelajahi */}
         <div className="footer-section">
           <h3 className="footer-title">JELAJAHI</h3>
           <ul className="footer-list">
@@ -28,9 +26,6 @@ export default function Footer() {
             <li>
               <Link href="/popular/new">Movie Terbaru</Link>
             </li>
-            {/* <li>
-              <Link href="/series">Series Terupdate</Link>
-            </li> */}
             <li>
               <Link href="/popular">Movie Populer</Link>
             </li>
@@ -65,7 +60,6 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Disclaimer */}
         <div className="footer-section">
           <h3 className="footer-title">DISCLAIMER</h3>
           <p className="footer-text">
@@ -76,7 +70,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Copyright */}
       <div className="footer-bottom">
         <p>
           © 2025 <Link href="/">Layarkaca21</Link>. All Right Reserved

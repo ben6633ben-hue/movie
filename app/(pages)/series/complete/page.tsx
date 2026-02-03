@@ -1,38 +1,15 @@
-"use client";
+import type { Metadata } from "next";
+import { guardDataRoute } from "@/lib/requestGuard";
+import { buildMetadata } from "@/lib/metadata";
+import SeriesCompletePageClient from "./SeriesCompletePageClient";
 
-import Navbar from "@/app/components/Navbar";
-import CategoryBar from "@/app/components/CategoryBar";
-import Footer from "@/app/components/Footer";
-import MovieCard from "@/app/components/MovieCard";
-import PageHeader from "@/app/components/PageHeader";
-import { seriesMovies, maratonDrakor } from "@/app/data/movies";
+export const metadata: Metadata = buildMetadata({
+  title: "Series Complete",
+  description: "Series sudah tamat sub indo di LK21.",
+});
 
-export default function SeriesCompletePage() {
-  // Series with episodes that are complete (simulated as having 16+ episodes)
-  const completeSeries = [...seriesMovies, ...maratonDrakor]
-    .filter((m) => m.episodes && m.episodes >= 16)
-    .slice(0, 20);
-
-  return (
-    <div className="min-h-screen">
-      <Navbar />
-      <CategoryBar />
-
-      <PageHeader 
-        breadcrumb="Series Complete"
-        totalItems={completeSeries.length}
-      />
-
-      <div className="listing-page">
-        <div className="movie-grid">
-          {completeSeries.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
-      </div>
-
-      <Footer />
-    </div>
-  );
+export default async function SeriesCompletePage() {
+  const res = await guardDataRoute("/series/complete");
+  if (res) return res;
+  return <SeriesCompletePageClient />;
 }
-

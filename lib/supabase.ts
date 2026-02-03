@@ -5,7 +5,6 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Validate URL format
 const isValidUrl = (url: string): boolean => {
   try {
     const parsed = new URL(url);
@@ -15,7 +14,6 @@ const isValidUrl = (url: string): boolean => {
   }
 };
 
-// Create client only if URL is available and valid
 export const supabase: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl)
     ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -26,7 +24,6 @@ export const supabase: SupabaseClient | null =
       })
     : null;
 
-// Log initialization status (only in development)
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   if (!supabase) {
     console.warn("⚠️ Supabase client not initialized:", {
@@ -40,7 +37,6 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   }
 }
 
-// Types matching your actual database schema
 export interface MovieRow {
   id: number;
   title: string;
@@ -58,7 +54,6 @@ export interface MovieRow {
   updatedat: string;
 }
 
-// ——— Data transfer limits (cap payloads to limit bandwidth) ———
 const DATA_MAX_PAGE_SIZE = 100;
 const MAX_LIST_RESULTS = 200;
 
@@ -69,7 +64,7 @@ function capListLimit(limit: number): number {
   return Math.min(Math.max(1, limit), MAX_LIST_RESULTS);
 }
 
-/** Paginated genre list — fast, no full table scan. Cached per request. Page size capped. */
+/** Paginated movies by genre. Cached, page size capped. */
 async function getMoviesByGenrePaginatedImpl(
   genre: string,
   page: number,
@@ -125,7 +120,7 @@ export async function getMoviesByGenreSample(genre: string, limit = 50) {
   return data as MovieRow[];
 }
 
-/** Genre + years (e.g. Drama/Thriller Terbaru limited to 2025/2026). Limit capped. */
+/** Movies by genre and year list. Limit capped. */
 export async function getMoviesByGenreAndYearsSample(
   genre: string,
   years: string[],
@@ -175,7 +170,6 @@ async function getMoviesByYearPaginatedImpl(
 }
 export const getMoviesByYearPaginated = cache(getMoviesByYearPaginatedImpl);
 
-// Fetch single movie by ID (cached per request to dedupe metadata + page)
 async function getMovieByIdImpl(id: number) {
   if (!supabase) {
     console.error("Error fetching movie: Supabase client not initialized.");
@@ -202,12 +196,11 @@ async function getMovieByIdImpl(id: number) {
 
 export const getMovieById = cache(getMovieByIdImpl);
 
-/** Row returned by search_movies_by_title RPC (includes total_count). */
 interface SearchMovieRow extends MovieRow {
   total_count?: number;
 }
 
-/** Normalized title search via DB: matches "Spider-Man" for "spiderman". Uses RPC search_movies_by_title. */
+/** Title search via RPC (normalized matching). */
 async function searchMoviesByTitleRpc(
   query: string,
   pageNum: number,
@@ -230,12 +223,11 @@ async function searchMoviesByTitleRpc(
   return { rows, total: Number(total) };
 }
 
-/** Build extra ilike patterns so "spiderman" can match "Spider-Man" (hyphen/word break). */
+/** Extra ilike patterns for hyphenated titles (e.g. spiderman → Spider-Man). */
 function fallbackSearchPatterns(query: string): string[] {
   const q = query.trim();
   if (!q) return [];
   const patterns: string[] = [`%${q}%`];
-  // Allow "spiderman" to match "Spider-Man": try "prefix%suffix" for last 3 chars (e.g. spider%man)
   if (q.length >= 6) {
     const split = q.length - 3;
     patterns.push(`%${q.slice(0, split)}%${q.slice(split)}%`);
@@ -243,7 +235,7 @@ function fallbackSearchPatterns(query: string): string[] {
   return patterns;
 }
 
-/** Fallback: ilike search when RPC is not available. Uses extra patterns so "spiderman" matches "Spider-Man". */
+/** Search fallback when RPC unavailable (ilike with hyphen-friendly patterns). */
 async function searchMoviesPaginatedFallback(
   query: string,
   page: number,
@@ -254,7 +246,6 @@ async function searchMoviesPaginatedFallback(
   const from = (page - 1) * cappedSize;
   const to = from + cappedSize - 1;
   const patterns = fallbackSearchPatterns(query);
-  // OR multiple ilike patterns: "spiderman" and "spider%man" so "Spider-Man 3" matches
   const orClause = patterns.map((p) => `title.ilike.${p}`).join(",");
   const { data, error, count } = await supabase
     .from("movies")
@@ -271,14 +262,12 @@ async function searchMoviesPaginatedFallback(
   return { movies: (data ?? []) as MovieRow[], total: count ?? 0 };
 }
 
-/** Min search query length to avoid heavy DB work for single chars. */
 const SEARCH_MIN_LENGTH = 2;
 
-/** Max rows per search request to limit data transfer (paginated and non-paginated). */
 const SEARCH_MAX_PAGE_SIZE = 100;
 const SEARCH_MAX_RESULTS = 100;
 
-/** Paginated search — uses RPC (normalized title) when available, else ilike fallback. Cached per request. */
+/** Paginated search. RPC first, then ilike fallback. Cached. */
 async function searchMoviesPaginatedImpl(
   query: string,
   page: number,
@@ -295,7 +284,6 @@ async function searchMoviesPaginatedImpl(
 }
 export const searchMoviesPaginated = cache(searchMoviesPaginatedImpl);
 
-// Fetch featured movies (high rating). Limit capped.
 export async function getFeaturedMovies(limit = 15) {
   if (!supabase) {
     console.error(
@@ -324,7 +312,7 @@ export async function getFeaturedMovies(limit = 15) {
   return data as MovieRow[];
 }
 
-/** Fetch movies whose title matches any of the given strings (ilike %title%). Limit capped for data transfer. */
+/** Movies whose title matches any of the given strings. Limit capped. */
 export async function getMoviesMatchingTitles(
   titles: string[],
   limit = 80
@@ -362,7 +350,7 @@ export async function getMoviesMatchingTitles(
   return results;
 }
 
-/** Fetch movies from given years (e.g. 2026, 2025). Limit capped. */
+/** Movies by year list. Limit capped. */
 export async function getMoviesByYearsSample(
   years: string[],
   limit = 30
@@ -384,7 +372,7 @@ export async function getMoviesByYearsSample(
   return (data ?? []) as MovieRow[];
 }
 
-/** Paginated movies from given years — for Film Terbaru / Baru Diupload. Page size capped. */
+/** Paginated movies by years (e.g. Film Terbaru). Page size capped. */
 async function getMoviesByYearsPaginatedImpl(
   years: string[],
   page: number,
@@ -410,7 +398,6 @@ async function getMoviesByYearsPaginatedImpl(
 }
 export const getMoviesByYearsPaginated = cache(getMoviesByYearsPaginatedImpl);
 
-/** Normalize for title matching: lowercase, keep alphanumeric. */
 function normalizeTitle(s: string): string {
   return s
     .toLowerCase()
@@ -418,7 +405,7 @@ function normalizeTitle(s: string): string {
     .trim();
 }
 
-/** Featured list: one movie per priority title (latest match), in order, then fill with recent 2026/2025. */
+/** Homepage featured: priority titles first (latest match), then recent 2026/2025. */
 export async function getFeaturedMoviesForHomepage(
   priorityTitles: string[],
   count = 15
@@ -481,7 +468,6 @@ export async function getFeaturedMoviesForHomepage(
   return featured;
 }
 
-// Fetch latest movies. Limit capped for data transfer.
 export async function getLatestMovies(limit = 20) {
   if (!supabase) {
     console.error(
@@ -510,7 +496,6 @@ export async function getLatestMovies(limit = 20) {
   return data as MovieRow[];
 }
 
-// Fetch movies with pagination. Cached per request. Page size capped.
 async function getMoviesPaginatedImpl(page: number, pageSize = 24) {
   if (!supabase) {
     console.error(
@@ -569,7 +554,7 @@ export const getMoviesOrderedByYearPaginated = cache(
   getMoviesOrderedByYearPaginatedImpl
 );
 
-/** Paginated series list — fast. Cached per request. Page size capped. */
+/** Paginated series. Cached, page size capped. */
 async function getSeriesMoviesPaginatedImpl(page: number, pageSize = 24) {
   if (!supabase) return { movies: [], total: 0 };
   const size = capPageSize(pageSize);
@@ -593,7 +578,6 @@ async function getSeriesMoviesPaginatedImpl(page: number, pageSize = 24) {
 }
 export const getSeriesMoviesPaginated = cache(getSeriesMoviesPaginatedImpl);
 
-// Helper to convert MovieRow to frontend Movie type
 export function toMovie(row: MovieRow) {
   return {
     id: row.id,
@@ -614,7 +598,6 @@ export function toMovie(row: MovieRow) {
   };
 }
 
-// Convert array of MovieRows to Movie array
 export function toMovies(rows: MovieRow[]) {
   return rows.map(toMovie);
 }

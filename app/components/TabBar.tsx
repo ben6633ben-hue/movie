@@ -13,7 +13,6 @@ export default function TabBar() {
   const tabs = [
     { label: "TERBARU", href: "/popular/new" },
     { label: "SERIES UNGGULAN", href: "/series" },
-    // { label: "SERIES UPDATE", href: "/series/terbaru" },
     { label: "TERPOPULER", href: "/popular" },
     { label: "REKOMENDASI", href: "/rekomendasi" },
   ];
@@ -36,14 +35,14 @@ export default function TabBar() {
               {tab.label}
             </Link>
           ))}
-          <Link href="/year/2025" className="tab-item flex items-center gap-1">
-            <CalendarIcon className="w-4 h-4" />
+          <Link href="/year/2025" className="tab-item flex items-center gap-1" aria-label="Film tahun 2025">
+            <CalendarIcon className="w-4 h-4" aria-hidden />
             <span>2025</span>
           </Link>
         </div>
 
-        <Link href="/movies" className="filter-button">
-          <AdjustmentsHorizontalIcon className="w-4 h-4" />
+        <Link href="/movies" className="filter-button" aria-label="Filter semua film">
+          <AdjustmentsHorizontalIcon className="w-4 h-4" aria-hidden />
           <span>FILTER</span>
         </Link>
       </div>

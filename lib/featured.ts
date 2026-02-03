@@ -1,4 +1,4 @@
-/** Featured films (film unggulan): prioritised on homepage and Film Terpopuler. */
+/** Featured titles for homepage and Film Terpopuler. */
 export const FEATURED_TITLE_PRIORITY = [
   "Demon Slayer",
   "365 days",

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import Navbar from "@/app/components/Navbar";
 import CategoryBar from "@/app/components/CategoryBar";
 import Footer from "@/app/components/Footer";
@@ -19,6 +20,38 @@ function shuffleArray<T>(arr: T[]): T[] {
   return out;
 }
 
+function isDirectVideoUrl(url: string): boolean {
+  const u = url.toLowerCase().trim();
+  return (
+    u.endsWith(".mp4") ||
+    u.endsWith(".webm") ||
+    u.endsWith(".m3u8") ||
+    u.endsWith(".mkv") ||
+    u.includes(".m3u8?") ||
+    u.includes("/stream/") ||
+    u.includes("/video/")
+  );
+}
+
+function isHlsUrl(url: string): boolean {
+  const u = url.toLowerCase().trim();
+  return u.endsWith(".m3u8") || u.includes(".m3u8?");
+}
+
+/** Domains that block embedding (X-Frame-Options / CSP). Show "Open in new tab" instead of iframe. */
+const EMBED_BLOCKED_HOSTS = ["playeriframe.sbs"];
+
+function isEmbedBlocked(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return EMBED_BLOCKED_HOSTS.some(
+      (d) => host === d || host.endsWith("." + d)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function MoviePageClient({
   movieId,
   initialMovie = null,
@@ -29,6 +62,38 @@ export default function MoviePageClient({
   const [movie, setMovie] = useState<Movie | null>(initialMovie ?? null);
   const [relatedMovies, setRelatedMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(!initialMovie);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<import("hls.js").default | null>(null);
+
+  const streamUrl = movie?.link1?.trim() || null;
+  const wouldUseIframe = streamUrl ? !isDirectVideoUrl(streamUrl) : false;
+  const useIframe = wouldUseIframe && streamUrl && !isEmbedBlocked(streamUrl);
+  const embedBlocked = wouldUseIframe && streamUrl && isEmbedBlocked(streamUrl);
+
+  useEffect(() => {
+    if (!streamUrl || !isHlsUrl(streamUrl) || !videoRef.current) return;
+    const video = videoRef.current;
+    const canPlayHls =
+      video.canPlayType("application/vnd.apple.mpegurl") ||
+      video.canPlayType("application/x-mpegURL");
+    if (canPlayHls) {
+      video.src = streamUrl;
+      return;
+    }
+    import("hls.js").then((Hls) => {
+      if (!Hls.default.isSupported()) return;
+      const hls = new Hls.default();
+      hlsRef.current = hls;
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+    }).catch(() => {});
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [streamUrl]);
 
   useEffect(() => {
     async function fetchData() {
@@ -92,30 +157,76 @@ export default function MoviePageClient({
       <CategoryBar />
 
       <div className="movie-detail">
-        <div className="movie-detail-header">
-          <div className="movie-poster">
-            <img src={movie.image} alt={movie.title} />
-            {movie.link1 ? (
-              <Link
-                href={`/redirect?url=${encodeURIComponent(
-                  movie.link1
-                )}&title=${encodeURIComponent(movie.title)}`}
-                className="play-button"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <PlayIcon className="w-12 h-12" />
-              </Link>
-            ) : (
-              <button className="play-button">
-                <PlayIcon className="w-12 h-12" />
-              </button>
-            )}
+        <div className="movie-detail-layout">
+          {/* Left: video (YouTube-style) */}
+          <div className="movie-detail-left">
+            <div className="movie-player-section">
+              {streamUrl ? (
+                <>
+                  {embedBlocked ? (
+                    <div className="movie-player-blocked">
+                      <p className="movie-player-blocked-text">
+                        Video tidak dapat ditampilkan di sini (pembatasan situs).
+                      </p>
+                      <a
+                        href={streamUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="movie-player-open-btn"
+                        aria-label="Buka di tab baru untuk nonton"
+                      >
+                        <PlayIcon className="w-6 h-6" aria-hidden />
+                        Buka di tab baru untuk nonton
+                      </a>
+                    </div>
+                  ) : useIframe ? (
+                    <iframe
+                      src={streamUrl}
+                      title={movie.title}
+                      className="movie-player-iframe"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      sandbox="allow-scripts allow-same-origin allow-presentation"
+                    />
+                  ) : (
+                    <video
+                      ref={videoRef}
+                      src={isHlsUrl(streamUrl) ? undefined : streamUrl}
+                      controls
+                      className="movie-player-video"
+                      playsInline
+                      crossOrigin="anonymous"
+                      aria-label={`Memutar video: ${movie.title}`}
+                    />
+                  )}
+                  {!embedBlocked && (
+                    <div className="movie-player-fallback">
+                      <a
+                        href={streamUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="movie-player-open-new"
+                        aria-label="Buka di tab baru jika video tidak tampil"
+                      >
+                        Buka di tab baru jika video tidak tampil
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="movie-player-placeholder relative block w-full aspect-video overflow-hidden">
+                  <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="(max-width:768px) 100vw, 70vw" />
+                  <span className="movie-player-no-stream">Tonton tidak tersedia</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="movie-info">
-            <h1>{movie.title}</h1>
-
+          <div className="movie-detail-right">
+            <div className="movie-poster movie-poster-thumb relative block w-full aspect-[2/3] overflow-hidden rounded">
+              <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="200px" />
+            </div>
+            <h1 className="movie-sidebar-title">{movie.title}</h1>
             <div className="movie-meta">
               <span className="rating">
                 <StarIcon className="w-5 h-5" />
@@ -142,7 +253,6 @@ export default function MoviePageClient({
                 <span className="maturity-badge">{movie.maturity}</span>
               )}
             </div>
-
             <div className="movie-genres">
               {movie.genre.split(",").map((g) => (
                 <Link
@@ -154,7 +264,6 @@ export default function MoviePageClient({
                 </Link>
               ))}
             </div>
-
             <div className="movie-description">
               <h3>Sinopsis</h3>
               <p>
@@ -164,40 +273,17 @@ export default function MoviePageClient({
                 {movie.quality || (movie.isHD ? "HD" : "Standard")}.
               </p>
             </div>
-
-            <div className="movie-actions">
-              {movie.link1 && (
-                <Link
-                  href={`/redirect?url=${encodeURIComponent(
-                    movie.link1
-                  )}&title=${encodeURIComponent(movie.title)}`}
-                  className="btn-watch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <PlayIcon className="w-5 h-5" />
-                  Tonton Sekarang
-                </Link>
-              )}
-              {movie.link2 && (
-                <Link
-                  href={`/redirect?url=${encodeURIComponent(
-                    movie.link2
-                  )}&title=${encodeURIComponent(movie.title)}`}
-                  className="btn-download"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download
-                </Link>
-              )}
-              {!movie.link1 && (
-                <button className="btn-watch">
-                  <PlayIcon className="w-5 h-5" />
-                  Tonton Sekarang
-                </button>
-              )}
-            </div>
+            {movie.link2 && (
+              <a
+                href={movie.link2}
+                className="btn-download"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Download ${movie.title}`}
+              >
+                Download
+              </a>
+            )}
           </div>
         </div>
       </div>

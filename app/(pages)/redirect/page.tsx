@@ -46,8 +46,7 @@ function RedirectContent() {
 }
 
 /*
-  ========== AD FLOW (commented out for now – uncomment to show ad before redirect) ==========
-  Replace RedirectContent above with the following and uncomment the imports at the top:
+  AD FLOW: Replace RedirectContent with the block below and uncomment imports at top.
 
   function RedirectContent() {
     const searchParams = useSearchParams();

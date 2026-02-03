@@ -1,40 +1,15 @@
-"use client";
+import type { Metadata } from "next";
+import { guardDataRoute } from "@/lib/requestGuard";
+import { buildMetadata } from "@/lib/metadata";
+import SeriesAsianPageClient from "./SeriesAsianPageClient";
 
-import Navbar from "@/app/components/Navbar";
-import CategoryBar from "@/app/components/CategoryBar";
-import Footer from "@/app/components/Footer";
-import MovieCard from "@/app/components/MovieCard";
-import PageHeader from "@/app/components/PageHeader";
-import { koreaTerbaru, thailandTerbaru, maratonDrakor } from "@/app/data/movies";
+export const metadata: Metadata = buildMetadata({
+  title: "Series Asian",
+  description: "Series Asian (Korea, Thailand, dll) sub indo di LK21.",
+});
 
-export default function SeriesAsianPage() {
-  const asianSeries = [...koreaTerbaru, ...thailandTerbaru, ...maratonDrakor]
-    .filter((m) => m.episodes);
-
-  const uniqueSeries = asianSeries.filter(
-    (movie, index, self) => index === self.findIndex((m) => m.id === movie.id)
-  );
-
-  return (
-    <div className="min-h-screen">
-      <Navbar />
-      <CategoryBar />
-
-      <PageHeader 
-        breadcrumb="Series Asian"
-        totalItems={uniqueSeries.length}
-      />
-
-      <div className="listing-page">
-        <div className="movie-grid">
-          {uniqueSeries.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
-      </div>
-
-      <Footer />
-    </div>
-  );
+export default async function SeriesAsianPage() {
+  const res = await guardDataRoute("/series/asian");
+  if (res) return res;
+  return <SeriesAsianPageClient />;
 }
-

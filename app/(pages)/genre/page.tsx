@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function GenreListPage() {
   const res = await guardDataRoute("/genre");
-  if (res) return res;
+  if (res) throw res;
   return <GenreListClient />;
 }

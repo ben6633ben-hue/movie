@@ -23,6 +23,6 @@ export default async function GenrePage({
 }) {
   const { genre } = await params;
   const res = await guardDataRoute(`/genre/${genre}`);
-  if (res) return res;
+  if (res) throw res;
   return <GenrePageClient />;
 }

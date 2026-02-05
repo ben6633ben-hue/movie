@@ -22,6 +22,6 @@ export default async function YearPage({
 }) {
   const { year } = await params;
   const res = await guardDataRoute(`/year/${year}`);
-  if (res) return res;
+  if (res) throw res;
   return <YearPageClient />;
 }

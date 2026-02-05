@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function SearchPage() {
   const res = await guardDataRoute("/search");
-  if (res) return res;
+  if (res) throw res;
   return <SearchPageClient />;
 }

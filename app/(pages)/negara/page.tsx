@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function NegaraPage() {
   const res = await guardDataRoute("/negara");
-  if (res) return res;
+  if (res) throw res;
   return <NegaraPageClient />;
 }

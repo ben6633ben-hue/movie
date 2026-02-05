@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function MoviesPage() {
   const res = await guardDataRoute("/movies");
-  if (res) return res;
+  if (res) throw res;
   return <MoviesPageClient />;
 }

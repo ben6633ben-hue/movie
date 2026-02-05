@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function NewUploadPage() {
   const res = await guardDataRoute("/popular/new");
-  if (res) return res;
+  if (res) throw res;
   return <NewUploadPageClient />;
 }

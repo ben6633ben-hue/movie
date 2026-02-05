@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function PopularPage() {
   const res = await guardDataRoute("/popular");
-  if (res) return res;
+  if (res) throw res;
   return <PopularPageClient />;
 }

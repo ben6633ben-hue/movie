@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function RatingPage() {
   const res = await guardDataRoute("/popular/rating");
-  if (res) return res;
+  if (res) throw res;
   return <RatingPageClient />;
 }

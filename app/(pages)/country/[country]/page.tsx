@@ -23,6 +23,6 @@ export default async function CountryPage({
 }) {
   const { country } = await params;
   const res = await guardDataRoute(`/country/${country}`);
-  if (res) return res;
+  if (res) throw res;
   return <CountryPageClient />;
 }

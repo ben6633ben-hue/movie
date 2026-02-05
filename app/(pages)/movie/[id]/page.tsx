@@ -31,7 +31,7 @@ export default async function MoviePage({
 }) {
   const { id } = await params;
   const guard = await guardDataRoute(`/movie/${id}`);
-  if (guard) return guard;
+  if (guard) throw guard;
   const movieId = Number(id);
   const movieRow = Number.isFinite(movieId)
     ? await unstable_cache(

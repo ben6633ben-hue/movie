@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function SeriesPage() {
   const res = await guardDataRoute("/series");
-  if (res) return res;
+  if (res) throw res;
   return <SeriesPageClient />;
 }

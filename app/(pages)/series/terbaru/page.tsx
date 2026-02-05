@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function SeriesTerbaruPage() {
   const res = await guardDataRoute("/series/terbaru");
-  if (res) return res;
+  if (res) throw res;
   return <SeriesTerbaruPageClient />;
 }

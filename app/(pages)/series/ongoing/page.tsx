@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function SeriesOngoingPage() {
   const res = await guardDataRoute("/series/ongoing");
-  if (res) return res;
+  if (res) throw res;
   return <SeriesOngoingPageClient />;
 }

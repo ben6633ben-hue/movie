@@ -10,6 +10,6 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function RekomendasiPage() {
   const res = await guardDataRoute("/rekomendasi");
-  if (res) return res;
+  if (res) throw res;
   return <RekomendasiPageClient />;
 }

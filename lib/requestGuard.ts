@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 80;
+/** In-memory only; on Cloudflare Workers/Pages this is per-isolate, not global. */
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function getClientIp(headersList: Headers): string {

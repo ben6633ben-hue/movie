@@ -3,6 +3,7 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata } from "@/lib/metadata";
 import SeriesOngoingPageClient from "./SeriesOngoingPageClient";
 
+export const revalidate = 60;
 export const metadata: Metadata = buildMetadata({
   title: "Series Ongoing",
   description: "Series sedang tayang sub indo di LK21.",

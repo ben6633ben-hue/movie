@@ -3,6 +3,7 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata } from "@/lib/metadata";
 import GenreListClient from "./GenreListClient";
 
+export const revalidate = 60;
 export const metadata: Metadata = buildMetadata({
   title: "Semua Genre Film",
   description: "Pilih genre film: Action, Drama, Horror, Comedy, dan lainnya sub indo di LK21.",

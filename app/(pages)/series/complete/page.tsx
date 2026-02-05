@@ -3,6 +3,7 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata } from "@/lib/metadata";
 import SeriesCompletePageClient from "./SeriesCompletePageClient";
 
+export const revalidate = 60;
 export const metadata: Metadata = buildMetadata({
   title: "Series Complete",
   description: "Series sudah tamat sub indo di LK21.",

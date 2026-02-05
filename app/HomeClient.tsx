@@ -17,7 +17,7 @@ import {
   getMoviesByGenreSample,
   getMoviesByGenreAndYearsSample,
   toMovies,
-} from "@/lib/supabase";
+} from "@/lib/supabase-client";
 
 const TERBARU_YEARS = ["2026", "2025"];
 

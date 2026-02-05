@@ -2,6 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "LK21 (Layarkaca21) Nonton Film Sub Indo Terbaru dan Terpopuler Free Streaming",
   description:

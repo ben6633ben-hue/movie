@@ -3,6 +3,8 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata } from "@/lib/metadata";
 import YearPageClient from "./YearPageClient";
 
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

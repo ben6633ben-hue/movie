@@ -8,7 +8,7 @@ import MovieCard from "@/app/components/MovieCard";
 import PageHeader from "@/app/components/PageHeader";
 import Pagination from "@/app/components/Pagination";
 import { Movie } from "@/types/movie";
-import { getMoviesOrderedByYearPaginated, toMovies } from "@/lib/supabase";
+import { getMoviesOrderedByYearPaginated, toMovies } from "@/lib/supabase-client";
 
 const ITEMS_PER_PAGE = 24;
 

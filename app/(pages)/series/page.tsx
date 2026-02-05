@@ -3,6 +3,7 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata } from "@/lib/metadata";
 import SeriesPageClient from "./SeriesPageClient";
 
+export const revalidate = 60;
 export const metadata: Metadata = buildMetadata({
   title: "Series Sub Indo",
   description: "Nonton series sub indo gratis di LK21. Daftar series terbaru.",

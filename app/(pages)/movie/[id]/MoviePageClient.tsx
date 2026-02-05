@@ -8,7 +8,7 @@ import CategoryBar from "@/app/components/CategoryBar";
 import Footer from "@/app/components/Footer";
 import MovieSection from "@/app/components/MovieSection";
 import { Movie } from "@/types/movie";
-import { getMovieById, getMoviesByGenreSample, getLatestMovies, toMovie, toMovies } from "@/lib/supabase";
+import { getMovieById, getMoviesByGenreSample, getLatestMovies, toMovie, toMovies } from "@/lib/supabase-client";
 import { StarIcon, PlayIcon, ClockIcon, CalendarIcon } from "@heroicons/react/24/solid";
 
 function shuffleArray<T>(arr: T[]): T[] {

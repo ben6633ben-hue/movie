@@ -3,6 +3,8 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata, slugToCountryName } from "@/lib/metadata";
 import CountryPageClient from "./CountryPageClient";
 
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

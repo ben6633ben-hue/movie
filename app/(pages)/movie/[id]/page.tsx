@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import MoviePageClient from "./MoviePageClient";
-import { getMovieById, toMovie } from "@/lib/supabase";
+import { getMovieById, toMovie } from "@/lib/supabase-server";
 import { guardDataRoute } from "@/lib/requestGuard";
 
-const CACHE_REVALIDATE_SECONDS = 60;
+export const revalidate = 60;
 
 export async function generateMetadata({
   params,
@@ -37,7 +37,7 @@ export default async function MoviePage({
     ? await unstable_cache(
         () => getMovieById(movieId),
         ["movie", String(movieId)],
-        { revalidate: CACHE_REVALIDATE_SECONDS }
+        { revalidate: 60 }
       )()
     : null;
   const initialMovie = movieRow ? toMovie(movieRow) : null;

@@ -9,7 +9,7 @@ import PageHeader from "@/app/components/PageHeader";
 import Pagination from "@/app/components/Pagination";
 import { Movie } from "@/types/movie";
 import { FEATURED_TITLE_PRIORITY } from "@/lib/featured";
-import { getFeaturedMoviesForHomepage, toMovies } from "@/lib/supabase";
+import { getFeaturedMoviesForHomepage, toMovies } from "@/lib/supabase-client";
 
 const ITEMS_PER_PAGE = 24;
 

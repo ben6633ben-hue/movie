@@ -3,6 +3,8 @@ import { guardDataRoute } from "@/lib/requestGuard";
 import { buildMetadata, slugToGenreTitle } from "@/lib/metadata";
 import GenrePageClient from "./GenrePageClient";
 
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

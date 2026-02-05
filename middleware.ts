@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Bot check and rate limit live in lib/requestGuard.ts (called from server components).
-export function proxy(_request: NextRequest) {
+// Edge middleware only (no Node APIs). Bot/rate-limit logic is in lib/requestGuard.ts (server components).
+export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 

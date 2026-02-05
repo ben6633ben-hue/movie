@@ -22,7 +22,16 @@ const missing = required.filter((key) => {
 if (missing.length > 0) {
   console.error("Missing required environment variables for build:");
   missing.forEach((key) => console.error("  - " + key));
-  console.error("\nCopy .env.example to .env.local and set the values.");
+  const isCloudflare = !!process.env.CF_PAGES_BRANCH;
+  if (isCloudflare) {
+    console.error("\nCloudflare Pages build detected. Checklist:");
+    console.error("  1. Project → Settings → Builds & deployments → Build configuration");
+    console.error("  2. Under Environment variables, add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    console.error("  3. Add them for Production and/or Preview (whichever environment is building this branch)");
+    console.error("  4. Save and trigger a new deploy (retry or push a commit)");
+  } else {
+    console.error("\nLocal: copy .env.example to .env.local and set the values.");
+  }
   process.exit(1);
 }
 
@@ -35,3 +44,4 @@ try {
 }
 
 console.log("Environment variables OK for build.");
+

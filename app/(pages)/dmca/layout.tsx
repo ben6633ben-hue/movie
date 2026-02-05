@@ -7,3 +7,4 @@ export default function DMCALayout({
 }) {
   return children;
 }
+

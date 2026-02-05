@@ -35,7 +35,7 @@ function RedirectContent() {
         <div className="redirect-actions">
           <a href={targetUrl ? decodeURIComponent(targetUrl) : "/"} className="btn-back" target="_blank" rel="noopener noreferrer">
             Buka halaman
-          </a>
+            </a>
           <Link href="/" className="btn-back" style={{ marginTop: "0.5rem" }}>
             Kembali ke Beranda
           </Link>

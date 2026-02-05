@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Reduces peak memory during build (helps on Cloudflare Pages)
+    webpackMemoryOptimizations: true,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co", pathname: "/**" },

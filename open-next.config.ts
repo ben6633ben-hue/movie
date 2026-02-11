@@ -1,7 +1,5 @@
-// default open-next.config.ts file created by @opennextjs/cloudflare
+// No R2 required. Omit incrementalCache to use the default "dummy" cache (no bucket setup).
+// For shared ISR across workers, use r2IncrementalCache or kvIncrementalCache and configure bindings.
 import { defineCloudflareConfig } from "@opennextjs/cloudflare/config";
-import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
 
-export default defineCloudflareConfig({
-	incrementalCache: r2IncrementalCache,
-});
+export default defineCloudflareConfig({});

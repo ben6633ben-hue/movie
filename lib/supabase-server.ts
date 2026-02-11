@@ -34,3 +34,4 @@ export async function getMovieById(id: number): Promise<MovieRow | null> {
   return data as MovieRow;
 }
 
+

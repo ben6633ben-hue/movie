@@ -215,7 +215,7 @@ export default function MoviePageClient({
                 </>
               ) : (
                 <div className="movie-player-placeholder relative block w-full aspect-video overflow-hidden">
-                  <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="(max-width:768px) 100vw, 70vw" />
+                  <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="(max-width:768px) 100vw, 70vw" unoptimized />
                   <span className="movie-player-no-stream">Tonton tidak tersedia</span>
                 </div>
               )}
@@ -224,7 +224,7 @@ export default function MoviePageClient({
 
           <div className="movie-detail-right">
             <div className="movie-poster movie-poster-thumb relative block w-full aspect-[2/3] overflow-hidden rounded">
-              <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="200px" />
+              <NextImage src={movie.image} alt={movie.title} fill className="object-cover" sizes="200px" unoptimized />
             </div>
             <h1 className="movie-sidebar-title">{movie.title}</h1>
             <div className="movie-meta">

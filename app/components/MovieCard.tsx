@@ -22,6 +22,7 @@ export default function MovieCard({ movie, size = "normal" }: Props) {
           fill
           sizes="(max-width: 480px) 120px, 150px"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
+          unoptimized
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />

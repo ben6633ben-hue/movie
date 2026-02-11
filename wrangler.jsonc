@@ -8,14 +8,7 @@
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
-	"services": [
-		{
-			// Self-reference service binding, the service name must match the worker name
-			// see https://opennext.js.org/cloudflare/caching
-			"binding": "WORKER_SELF_REFERENCE",
-			"service": "movie-site"
-		}
-	],
+	// Optional: add "services": [{"binding": "WORKER_SELF_REFERENCE", "service": "<your-worker-name>"}] after first deploy if you need on-demand revalidation. On Pages the script name may differ from "movie-site".
 	"images": {
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image

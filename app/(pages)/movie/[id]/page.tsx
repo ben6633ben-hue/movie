@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import MoviePageClient from "./MoviePageClient";
 import { getMovieById, toMovie } from "@/lib/supabase-server";
 import { guardDataRoute } from "@/lib/requestGuard";
+import { parseMovieSlug } from "@/lib/slug";
 
 export const revalidate = 60;
 
@@ -11,10 +13,10 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
-  const movieId = Number(id);
+  const { id: slug } = await params;
+  const movieId = parseMovieSlug(slug);
   const movieRow =
-    Number.isFinite(movieId) ? await getMovieById(movieId) : null;
+    movieId != null ? await getMovieById(movieId) : null;
   const movieTitle = movieRow?.title ?? null;
 
   const title = movieTitle
@@ -29,18 +31,20 @@ export default async function MoviePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const guard = await guardDataRoute(`/movie/${id}`);
+  const { id: slug } = await params;
+  const guard = await guardDataRoute(`/movie/${slug}`);
   if (guard) throw guard;
-  const movieId = Number(id);
-  const movieRow = Number.isFinite(movieId)
-    ? await unstable_cache(
-        () => getMovieById(movieId),
-        ["movie", String(movieId)],
-        { revalidate: 60 }
-      )()
-    : null;
-  const initialMovie = movieRow ? toMovie(movieRow) : null;
+  const movieId = parseMovieSlug(slug);
+  const movieRow =
+    movieId != null
+      ? await unstable_cache(
+          () => getMovieById(movieId),
+          ["movie", String(movieId)],
+          { revalidate: 60 }
+        )()
+      : null;
+  if (movieId == null || !movieRow) notFound();
+  const initialMovie = toMovie(movieRow);
   return (
     <MoviePageClient
       key={movieId}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { Movie } from "@/types/movie";
+import { moviePath } from "@/lib/slug";
 import { StarIcon } from "@heroicons/react/24/solid";
 
 interface Props {
@@ -14,7 +15,7 @@ export default function MovieCard({ movie, size = "normal" }: Props) {
   const cardHeight = isLarge ? "h-[210px]" : "h-[170px]";
 
   return (
-    <Link href={`/movie/${movie.id}`} className={`movie-card ${cardWidth}`}>
+    <Link href={moviePath(movie.title, movie.id)} className={`movie-card ${cardWidth}`}>
       <div className={`relative ${cardHeight} rounded overflow-hidden group cursor-pointer`}>
         <NextImage
           src={movie.image}
